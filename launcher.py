@@ -1,4 +1,5 @@
 import os
+import subprocess
 import requests
 import zipfile
 import shutil
@@ -142,6 +143,7 @@ class LauncherWindow(tk.Tk):
             if os_selected == "Windows":
                 os.startfile(executable_path)
             elif os_selected == "Mac":
+                subprocess.run(["chmod", "-R", "+x", executable_path])
                 os.system(f'open "{executable_path}"')
         else:
             messagebox.showerror("Error", "Game executable not found")
