@@ -1,10 +1,11 @@
 import os
-import platform
 import requests
 import zipfile
 import shutil
-from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QLabel, QMessageBox, QVBoxLayout, QWidget, QProgressBar, QComboBox
-from PyQt5.QtCore import QThread, pyqtSignal
+import tkinter as tk
+from tkinter import messagebox
+from tkinter.ttk import Progressbar, Combobox
+from threading import Thread
 
 class Version:
     def __init__(self, version_str):
@@ -16,13 +17,11 @@ class Version:
     def is_different_than(self, other):
         return (self.major, self.minor, self.sub_minor) != (other.major, other.minor, other.sub_minor)
 
-class DownloadThread(QThread):
-    download_progress = pyqtSignal(int)
-    download_completed = pyqtSignal(str)
-
+class DownloadThread(Thread):
     def __init__(self, download_url):
         super().__init__()
         self.download_url = download_url
+        self.download_progress = 0
 
     def run(self):
         response = requests.get(self.download_url, stream=True)
@@ -33,31 +32,31 @@ class DownloadThread(QThread):
             for data in response.iter_content(block_size):
                 out_file.write(data)
                 progress += len(data)
-                self.download_progress.emit(int((float(progress) / file_size) * 100))
-        self.download_completed.emit('Build.zip')
+                self.download_progress = int((float(progress) / file_size) * 100)
 
-class LauncherWindow(QMainWindow):
+class LauncherWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
-        super(LauncherWindow, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.online_version = None
         self.root_path = os.getcwd()
         self.version_file = os.path.join(self.root_path, "Version.txt")
         self.game_zip = os.path.join(self.root_path, "Build.zip")
-        self.play_button = QPushButton("Check for updates")
-        self.play_button.clicked.connect(self.check_for_updates)
-        self.status_label = QLabel("")
-        self.central_widget = QWidget()
-        self.layout = QVBoxLayout(self.central_widget)
-        self.layout.addWidget(self.play_button)
-        self.layout.addWidget(self.status_label)
-        self.setCentralWidget(self.central_widget) 
-        self.progress_bar = QProgressBar()
-        self.layout.addWidget(self.progress_bar)
 
-        self.os_selection = QComboBox()
-        self.os_selection.addItem("Windows")
-        self.os_selection.addItem("Mac")
-        self.layout.addWidget(self.os_selection)
+        self.title("Game Launcher")
+
+        self.play_button = tk.Button(self, text="Check for updates", command=self.check_for_updates)
+        self.play_button.pack()
+
+        self.status_label = tk.Label(self, text="")
+        self.status_label.pack()
+
+        self.progress_bar = Progressbar(self, mode="determinate")
+        self.progress_bar.pack()
+
+        self.os_selection = Combobox(self)
+        self.os_selection["values"] = ("Windows", "Mac")
+        self.os_selection.current(0)
+        self.os_selection.pack()
 
         self.download_thread = None
 
@@ -66,18 +65,18 @@ class LauncherWindow(QMainWindow):
             with open(self.version_file, 'r', encoding='utf-8') as f:
                 local_version_str = f.read().strip().strip('\n')
                 if not local_version_str:
-                    QMessageBox.critical(self, "Error", "Version file is empty")
+                    messagebox.showerror("Error", "Version file is empty")
                     return
                 try:
                     local_version = Version(local_version_str)
                 except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Error reading version file: {e}")
+                    messagebox.showerror("Error", f"Error reading version file: {e}")
                     return
             try:
                 response = requests.get("https://windows.lightwrite.site/Version.txt")
                 self.online_version = Version(response.text)
                 if self.online_version.is_different_than(local_version):
-                    self.status_label.setText("Update found")
+                    self.status_label.config(text="Update found")
                     if os.path.exists(self.version_file):
                         os.remove(self.version_file)
                     build_folder = os.path.join(self.root_path, "Build")
@@ -85,10 +84,10 @@ class LauncherWindow(QMainWindow):
                         shutil.rmtree(build_folder)
                     self.download_game_files(self.online_version)
                 else:
-                    self.status_label.setText("Up to date")
+                    self.status_label.config(text="Up to date")
                     self.launch_game_if_exists(executable_name="TrenchWars.exe")  # Provide the executable name based on your requirements
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Error checking for game updates: {e}")
+                messagebox.showerror("Error", f"Error checking for game updates: {e}")
         else:
             self.download_game_files()
 
@@ -98,7 +97,7 @@ class LauncherWindow(QMainWindow):
             self.online_version = Version(response.text)
 
         # Get the selected operating system
-        os_selected = self.os_selection.currentText()
+        os_selected = self.os_selection.get()
 
         # Download URL based on the selected operating system
         if os_selected == "Windows":
@@ -110,26 +109,34 @@ class LauncherWindow(QMainWindow):
 
         # Create the DownloadThread instance here, providing the download_url
         self.download_thread = DownloadThread(download_url)
-        self.download_thread.download_progress.connect(self.progress_bar.setValue)
-        self.download_thread.download_completed.connect(lambda path: self.on_download_completed(path, executable_name))
+        self.progress_bar["maximum"] = 100
+        self.progress_bar["value"] = 0
+        self.status_label.config(text="Downloading...")
         self.download_thread.start()
-        self.status_label.setText("Downloading...")
+        self.check_download_progress(executable_name)
 
-    def on_download_completed(self, file_path, executable_name):
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+    def check_download_progress(self, executable_name):
+        if self.download_thread.is_alive():
+            self.progress_bar["value"] = self.download_thread.download_progress
+            self.after(100, lambda: self.check_download_progress(executable_name))
+        else:
+            self.on_download_completed(executable_name)
+
+    def on_download_completed(self, executable_name):
+        with zipfile.ZipFile('Build.zip', 'r') as zip_ref:
             zip_ref.extractall(self.root_path)
-        os.remove(file_path)
+        os.remove('Build.zip')
         with open(self.version_file, 'w') as f:
             f.write(str(self.online_version))
-        self.status_label.setText("Done!")
+        self.status_label.config(text="Done!")
         self.launch_game_if_exists(executable_name)
 
     def launch_game_if_exists(self, executable_name):
-        os_selected = self.os_selection.currentText()
+        os_selected = self.os_selection.get()
         executable_path = os.path.join(self.root_path, "Build", executable_name)
 
         if os_selected == "Mac":
-            executable_path = os.path.join(executable_path, "Contents", "MacOS", "TrenchWars")
+            executable_path = os.path.join(self.root_path, "Build_Mac", "TrenchWars.app")
 
         if os.path.exists(executable_path):
             if os_selected == "Windows":
@@ -137,10 +144,8 @@ class LauncherWindow(QMainWindow):
             elif os_selected == "Mac":
                 os.system(f'open "{executable_path}"')
         else:
-            QMessageBox.critical(self, "Error", "Game executable not found")
+            messagebox.showerror("Error", "Game executable not found")
 
 if __name__ == "__main__":
-    app = QApplication([])
     window = LauncherWindow()
-    window.show()
-    app.exec_()
+    window.mainloop()
