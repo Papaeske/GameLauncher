@@ -10,10 +10,13 @@ import tkinter.ttk as ttk
 import sv_ttk
 import platform
 import textwrap
+import urllib.request
+import io
 from tkinter import messagebox
 from tkinter.ttk import Progressbar, Combobox
 from threading import Thread
 from PIL import Image, ImageTk
+from io import BytesIO
 
 class Version:
     def __init__(self, version_str):
@@ -59,16 +62,25 @@ class LauncherWindow(tk.Tk):
         super().__init__(*args, **kwargs)
 
         sv_ttk.set_theme("dark")
-        self.iconbitmap("images/Icon.ico")
 
-        splash_image_path = "images/SplashScreen.png"
-        splash_image = Image.open(splash_image_path)
-        splash_image = splash_image.resize((400, 225), Image.LANCZOS)  # Adjust the size as per your requirement
+        icon_url = "https://dl.dropboxusercontent.com/s/1y58zzez8yzn2vr/Icon.ico?dl=0"
+        response = requests.get(icon_url)
+        icon_data = response.content
+        icon_image = Image.open(BytesIO(icon_data))
+        icon_tk = ImageTk.PhotoImage(icon_image)
+        self.iconphoto(True, icon_tk)
+
+
+        splash_image_url = "https://dl.dropboxusercontent.com/s/mmyjorfglcmxh0x/SplashScreen.png?dl=0"
+        response = requests.get(splash_image_url)
+        image_data = response.content
+        splash_image = Image.open(io.BytesIO(image_data))
+        splash_image = splash_image.resize((400, 225), Image.LANCZOS)
         splash_image_tk = ImageTk.PhotoImage(splash_image)
 
-        self.splash_label = ttk.Label(self, image=splash_image_tk)
-        self.splash_label.pack(fill="x")
-        self.splash_label.image = splash_image_tk
+        splash_label = ttk.Label(self, image=splash_image_tk)
+        splash_label.pack(fill="x")
+        splash_label.image = splash_image_tk
 
         self.online_version = None
         self.root_path = os.getcwd()
@@ -76,7 +88,7 @@ class LauncherWindow(tk.Tk):
         self.game_zip = os.path.join(self.root_path, "Build.zip")
 
         self.title("Launcher")
-        self.geometry("400x540")  # Set the window size
+        self.geometry("400x540")
 
         self.install_button = ttk.Button(self, text="Install", command=self.install_game)
         self.install_button.pack(pady=20)
@@ -112,8 +124,12 @@ class LauncherWindow(tk.Tk):
         self.uninstall_button = ttk.Button(self, text="Uninstall", command=self.uninstall_game)
         self.uninstall_button.pack(pady=20)
 
-        self.image_path = "images/moods.png"  # Replace with the path to your image file
-        self.image = Image.open(self.image_path)
+        image_url = "https://dl.dropboxusercontent.com/s/smip4u04o0706tm/moods.png?dl=0"
+
+        response = requests.get(image_url)
+        image_data = response.content
+
+        self.image = Image.open(BytesIO(image_data))
         self.image = self.image.resize((100, 43), Image.LANCZOS)
         self.image_tk = ImageTk.PhotoImage(self.image)
 
