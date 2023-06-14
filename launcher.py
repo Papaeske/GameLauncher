@@ -61,13 +61,22 @@ class LauncherWindow(tk.Tk):
         sv_ttk.set_theme("dark")
         self.iconbitmap("images/Icon.ico")
 
+        splash_image_path = "images/SplashScreen.png"
+        splash_image = Image.open(splash_image_path)
+        splash_image = splash_image.resize((400, 225), Image.LANCZOS)  # Adjust the size as per your requirement
+        splash_image_tk = ImageTk.PhotoImage(splash_image)
+
+        self.splash_label = ttk.Label(self, image=splash_image_tk)
+        self.splash_label.pack(fill="x")
+        self.splash_label.image = splash_image_tk
+
         self.online_version = None
         self.root_path = os.getcwd()
         self.version_file = os.path.join(self.root_path, "Version.txt")
         self.game_zip = os.path.join(self.root_path, "Build.zip")
 
         self.title("Launcher")
-        self.geometry("400x325")  # Set the window size
+        self.geometry("400x540")  # Set the window size
 
         self.install_button = ttk.Button(self, text="Install", command=self.install_game)
         self.install_button.pack(pady=20)
@@ -118,27 +127,27 @@ class LauncherWindow(tk.Tk):
         self.check_code_update()
 
     def check_code_update(self):
-        github_url = "https://raw.githubusercontent.com/Papaeske/GameLauncher/main/launcher.py"
-        response = requests.get(github_url)
-        github_code = response.text
+        github_url = "https://dl.dropboxusercontent.com/s/pp9fp9i7o7tesev/launcher.py?dl=0"
+        # response = requests.get(github_url)
+        # github_code = response.text
 
-        with open(__file__, 'r') as f:
-            local_code = f.read()
+        # with open(__file__, 'r') as f:
+        #     local_code = f.read()
 
-        if local_code != github_code:
-            # Remove extra indentation from the GitHub code
-            github_lines = github_code.split('\n')
-            min_indent = min(len(line) - len(line.lstrip()) for line in github_lines if line.strip())
-            cleaned_lines = [line[min_indent:].rstrip() for line in github_lines]
+        # local_code = local_code.replace('\r\n', '\n')
+        # github_code = github_code.replace('\r\n', '\n')
 
-            # Replace local code with cleaned GitHub code
-            cleaned_code = '\n'.join(cleaned_lines)
-            with open(__file__, 'w') as f:
-                f.write(cleaned_code)
+        # if local_code.strip() != github_code.strip():
+        #     github_lines = github_code.split('\n')
+        #     min_indent = min(len(line) - len(line.lstrip()) for line in github_lines if line.strip())
+        #     cleaned_lines = [line[min_indent:].rstrip() for line in github_lines]
 
-            # Restart the launcher
-            messagebox.showinfo("Code Update", "Local code has been updated. Please restart the launcher.")
-            self.destroy()
+        #     cleaned_code = '\n'.join(cleaned_lines)
+        #     with open(__file__, 'w') as f:
+        #         f.write(cleaned_code)
+
+        #     messagebox.showinfo("Code Update", "Local code has been updated. Please restart the launcher.")
+        #     self.destroy()
 
     def update_ui(self):
         game_installed = self.check_game_installed()
