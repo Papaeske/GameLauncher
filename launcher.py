@@ -128,26 +128,26 @@ class LauncherWindow(tk.Tk):
 
     def check_code_update(self):
         github_url = "https://dl.dropboxusercontent.com/s/pp9fp9i7o7tesev/launcher.py?dl=0"
-        # response = requests.get(github_url)
-        # github_code = response.text
+        response = requests.get(github_url)
+        github_code = response.text
 
-        # with open(__file__, 'r') as f:
-        #     local_code = f.read()
+        with open(__file__, 'r') as f:
+            local_code = f.read()
 
-        # local_code = local_code.replace('\r\n', '\n')
-        # github_code = github_code.replace('\r\n', '\n')
+        local_code = local_code.replace('\r\n', '\n')
+        github_code = github_code.replace('\r\n', '\n')
 
-        # if local_code.strip() != github_code.strip():
-        #     github_lines = github_code.split('\n')
-        #     min_indent = min(len(line) - len(line.lstrip()) for line in github_lines if line.strip())
-        #     cleaned_lines = [line[min_indent:].rstrip() for line in github_lines]
+        if local_code.strip() != github_code.strip():
+            github_lines = github_code.split('\n')
+            min_indent = min(len(line) - len(line.lstrip()) for line in github_lines if line.strip())
+            cleaned_lines = [line[min_indent:].rstrip() for line in github_lines]
 
-        #     cleaned_code = '\n'.join(cleaned_lines)
-        #     with open(__file__, 'w') as f:
-        #         f.write(cleaned_code)
+            cleaned_code = '\n'.join(cleaned_lines)
+            with open(__file__, 'w') as f:
+                f.write(cleaned_code)
 
-        #     messagebox.showinfo("Code Update", "Local code has been updated. Please restart the launcher.")
-        #     self.destroy()
+            messagebox.showinfo("Code Update", "Local code has been updated. Please restart the launcher.")
+            self.destroy()
 
     def update_ui(self):
         game_installed = self.check_game_installed()
@@ -263,8 +263,6 @@ class LauncherWindow(tk.Tk):
         self.size_label.config(text="")
         self.time_label.config(text="")
         self.launch_game_if_exists(executable_name)
-
-        # Update the UI after installing the game
         self.update_ui()
 
     def launch_game_if_exists(self, executable_name):
@@ -297,13 +295,11 @@ class LauncherWindow(tk.Tk):
             shutil.rmtree(os.path.join(self.root_path, "Build_Mac"))
 
         self.status_label.config(text="Game has been removed")
-
-        # Update the UI after uninstalling the game
         self.update_ui()
 
     def check_game_installed(self):
         executable_name = "TrenchWars.exe" if self.os_selection.get() == "Windows" else "TrenchWars.app"
-        executable_path = os.path.join(self.root_path, "Build", executable_name)
+        executable_path = os.path.join(self.root_path, "Build" if self.os_selection.get() == "Windows" else "Build_Mac", executable_name)
         return os.path.exists(executable_path)
 
 
