@@ -9,6 +9,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import sv_ttk
 import platform
+import textwrap
 from tkinter import messagebox
 from tkinter.ttk import Progressbar, Combobox
 from threading import Thread
@@ -125,9 +126,15 @@ class LauncherWindow(tk.Tk):
             local_code = f.read()
 
         if local_code != github_code:
-            # Replace local code with GitHub code
+            # Remove extra indentation from the GitHub code
+            github_lines = github_code.split('\n')
+            min_indent = min(len(line) - len(line.lstrip()) for line in github_lines if line.strip())
+            cleaned_lines = [line[min_indent:].rstrip() for line in github_lines]
+
+            # Replace local code with cleaned GitHub code
+            cleaned_code = '\n'.join(cleaned_lines)
             with open(__file__, 'w') as f:
-                f.write(github_code)
+                f.write(cleaned_code)
 
             # Restart the launcher
             messagebox.showinfo("Code Update", "Local code has been updated. Please restart the launcher.")
